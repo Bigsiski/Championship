@@ -54,7 +54,7 @@ export default class Main extends React.Component {
 
         }) .catch((err) => console.log(err))
 
-        //Шукаємо за назвою чемпіонату його champID, далі в таблиці team шукаємо teamName за champID
+        //Шукаємо за назвою чемпіонату його champID, далі в таблиці teams шукаємо teamName за champID
         axios.get("/api/collections/extract", {
             params: {
                 path: [{table: "Championship", field: "champName"}, {table: "Team", field: "champId"}],

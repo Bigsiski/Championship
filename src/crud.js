@@ -17,6 +17,7 @@ export default class Main extends React.Component {
       selectedTable: null,
 
       fields: [],
+      idKeys: [],
       selectedField: null,
     };
   }
@@ -27,7 +28,7 @@ export default class Main extends React.Component {
     axios.get("/api/collections", {}).then((res) => {
       this.setState({
         tables: res.data.map((item) => {
-          return {label: item.name, value: item.name}
+          return {label: item, value: item}
         })
       });
       console.log(res)
@@ -36,16 +37,30 @@ export default class Main extends React.Component {
 
   configureFieldsSelect = async () => {
     if (this.state.selectedOperation) {
-      await axios.get("/api/collections/metadata", {params: {table: this.state.selectedTable.value}}).then((res) => {
-        this.setState({
-          fields: res.data.map((item) => {
-            return {label: item, value: item}
-          })
-        });
-        console.log(res)
-      }).catch((err) => console.log(err))
-    }
+      let fields = [], idKeys = [], keysNames = [];
+      await axios.get("/api/collections/metadata", {params: {table: this.state.selectedTable.value}})
+        .then((res) => {
+          console.log(res);
 
+          res.data.map((item) => {
+            if (typeof item === "string") {
+              fields = fields.concat({label: item, value: item});
+            } else {
+              item.map((selects, i) => {
+                keysNames.push([selects]);
+                selects[Object.keys(selects)[0]].map((object) => {
+                  idKeys[i] = idKeys.concat({label: object._id, value: object._id})
+                });
+              })
+            }
+          });
+          return false;
+        }).catch((err) => console.log(err));
+
+      this.setState(
+        {fields: fields, idKeys: idKeys, keysNames: keysNames}
+      )
+    }
   };
 
   crudDynamically = (event) => {
@@ -60,13 +75,13 @@ export default class Main extends React.Component {
       });
       console.log(payload);
 
-     axios.post("/api/collections/", payload, {params: {table: selectedTable.value}}).then((res) => {
-       console.log(res)
-     }).catch((err) => console.log(err))
+      axios.post("/api/collections/", payload, {params: {table: selectedTable.value}}).then((res) => {
+        console.log(res)
+      }).catch((err) => console.log(err))
       //Read
-    } else if(selectedTable && selectedOperation === operations[1]) {
+    } else if (selectedTable && selectedOperation === operations[1]) {
 
-        console.log(event.target.value);
+      console.log(event.target.value);
 
       axios.get("/api/collections/extract", {params: {table: selectedTable.value}}).then((res) => {
         console.log(res)
@@ -75,14 +90,12 @@ export default class Main extends React.Component {
   };
 
   render() {
-    console.log(this.state.selectedOperation);
     return (
       <div className="column">
 
         <div className="row">CRUD</div>
 
         <form className="row" onSubmit={(e) => {
-          this.crudDynamically(e);
         }}>
           <div>
             <div> Select operation</div>
@@ -91,7 +104,6 @@ export default class Main extends React.Component {
               onChange={async (selected) => {
                 await this.setState({
                   selectedOperation: selected,
-
                 });
               }}
               options={this.state.operations}
@@ -113,6 +125,15 @@ export default class Main extends React.Component {
 
           {this.state.selectedTable && this.state.selectedOperation === this.state.operations[0] ?
             <div className="column">
+              {this.state.idKeys.map((field, i) => {
+                return <Select
+                  key={i}
+                  name={"textInput" + i + this.state.fields.length}
+                 // options={this.state.idKeys[i]}
+                  styles={reactSelectStyles}
+               // placeholder={this.state.keysNames[i]}
+                />
+              })}
               {this.state.fields.map((field, i) => {
                 return <div key={i}>
                   <div>
