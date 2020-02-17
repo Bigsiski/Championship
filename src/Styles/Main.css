@@ -6,8 +6,7 @@
     justify-content: space-around;
     height: 100vh;
     width: 100vw;
-    padding-bottom: 30vh;
-    border:2px solid black;
+    border: 2px solid black;
 }
 
 .row {
@@ -22,4 +21,59 @@
     align-items: center;
     justify-content: space-around;
     width: 100%;
+}
+
+.button {
+    padding-left: 0;
+    height: 45px;
+}
+
+.input, .button {
+    width: 180px;
+    min-height: 45px;
+    padding-left: 10px;
+    border: 1px solid #c0f0de;
+    border-radius: 0;
+    color: #c0f0de;
+    background-color: transparent;
+    box-shadow: 0 8px 3px rgba(0, 0, 0, 0.3);
+    outline: none;
+}
+
+.input::placeholder {
+    color: #c0f0de;
+}
+
+.button:hover {
+    cursor: pointer;
+    border-color: #d6d6d6;
+}
+
+.input:hover {
+    cursor: text;
+    border-color: #d6d6d6;
+}
+
+.input:active, .button:active {
+    outline: none;
+    border-color: rgb(250, 190, 14);
+}
+
+.form {
+    padding-bottom: 30vh;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.fieldsBlock {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    width: 100%;
+    height: 100%;
+}
+
+.field {
+    margin-top: 20px;
 }
