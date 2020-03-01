@@ -5,6 +5,11 @@ import {reactSelectStyles} from './Styles/react-select';
 import Select from 'react-select';
 import axios from "axios";
 
+import Create from "./Operations/Create"
+import Read from "./Operations/Read"
+import Update from "./Operations/Update"
+import Delete from "./Operations/Delete"
+
 export default class Main extends React.Component {
   constructor(props) {
     super(props);
@@ -22,7 +27,8 @@ export default class Main extends React.Component {
       selectedField: null,
 
       values: [],
-      selectedValue: null
+      selectedValue: null,
+      data: null
     };
   }
 
@@ -33,27 +39,57 @@ export default class Main extends React.Component {
           return {label: item, value: item}
         })
       });
-      // console.log(res)
     }).catch((err) => console.log(err))
   }
 
-  extractionFields = (requireParents) => {
+  setSelectedValue = (property, selectedValue) => {
+    this.setState({[property]: selectedValue})
+  };
 
+  getMatadata = (selectedTable, requireParents) => {
     return axios.get("/api/collections/metadata", {
       params: {
-        table: this.state.selectedTable.value,
+        table: selectedTable.value,
         requireParents: requireParents
       }
     })
   };
 
+  onFieldsChange = () => {
+    const {selectedOperation, operations, selectedTable, selectedField} = this.state;
+    if (selectedOperation.value === operations[1].value || selectedOperation.value === operations[3].value) {
+      this.extract(selectedTable, selectedField).then((res) => {
+        console.log(res)
+        this.setState({
+          values: res.data.map((item) => {
+            return {label: item[Object.keys(item)[0]], value: item[Object.keys(item)[0]]}
+          })
+        })
+      }).catch((err) => console.log(err));
+    } else if (selectedOperation.value === operations[2].value) {
+      this.getMatadata(selectedTable).then((res) => {
+        console.log(res.data);
+        this.setState(
+          {
+            values: res.data.map((item) => {
+              return {label: item, value: item}
+            })
+          })
+      }).catch((err) => console.log(err));
+    }
+  };
+
   configureFieldsSelect = async () => {
     const {selectedOperation, selectedTable, operations} = this.state;
+    this.setState({
+      selectedField: null, values: [], selectedValue: null, data: null
+    });
+
     if (selectedTable) {
       if (selectedOperation.value === operations[0].value) {
         let fields = [], idKeys = [], keysNames = [];
 
-        await this.extractionFields(true).then((res) => {
+        await this.getMatadata(selectedTable, true).then((res) => {
           console.log(res);
 
           let key = 0;
@@ -74,9 +110,8 @@ export default class Main extends React.Component {
         this.setState(
           {fields: fields, idKeys: idKeys, keysNames: keysNames}
         )
-      } else if (selectedOperation.value === operations[1].value || selectedOperation.value === operations[2].value
-        || selectedOperation.value === operations[3].value) {
-        this.extractionFields().then((res) => {
+      } else if (selectedOperation.value === operations[1].value || selectedOperation.value === operations[3].value) {
+        this.getMatadata(selectedTable).then((res) => {
           console.log(res.data);
           this.setState(
             {
@@ -85,45 +120,76 @@ export default class Main extends React.Component {
               })
             })
         }).catch((err) => console.log(err));
+      } else if (selectedOperation.value === operations[2].value) {
+        this.extract(selectedTable).then((res) => {
+          this.setState(
+            {
+              fields: res.data.map((item) => {
+                console.log(item)
+                return {label: item._id, value: item._id}
+              })
+            });
+        }).catch((err) => console.log(err));
       }
     }
   };
 
-  create = (event, selectedTable, fields, keysNames) => {
-    console.log("selectedTable.value");
-    console.log(selectedTable.value);
-
+  create = (event, selectedTable, fields, keysNames, idKeys) => {
     let payload = {};
+    payload.Parents = [];
 
+    for (let i = 0; i < keysNames.length; i++) {
+      payload.Parents[i] = {};
+      payload.Parents[i]._id = event.target.elements['textSelect' + i].value;
+      payload.Parents[i].ParentName = keysNames[i]; //necessary only on server working
+    }
     for (let i = 0; i < fields.length; i++) {
-      console.log(event.target.elements['textInput' + i].value);
-
-      //payload[item.value] = event.target.elements['textInput' + i].value
+      payload[fields[i].value] = event.target.elements['textInput' + i].value;
+      event.target.elements['textInput' + i].value = "";
     }
 
-    axios.post("/api/collections/", payload, {params: {table: selectedTable.value}}).then((res) => {
+    axios.post("/api/collections", payload, {params: {table: selectedTable.value}}).then((res) => {
       console.log(res)
     }).catch((err) => console.log(err))
   };
 
+  extract = (selectedTable, selectedField) => {
+    let field;
+    if (selectedField) {
+      field = selectedField.value;
+    } else {
+      field = "_id"
+    }
+    return axios.get("/api/collections/extract", {
+      params: {
+        table: selectedTable.value, projection: field,
+      }
+    })
+  };
+
   find = (selectedTable, selectedField, selectedValue) => {
     if (selectedField && selectedValue) {
-      axios.get("/api/collections/find", {
+      axios.get("/api/collections/extract", {
         params: {
           table: selectedTable.value, field: selectedField.value,
           value: selectedValue.value
         }
-      }).then((res) => {
-        console.log(res)
+      }).then(async (res) => {
+        console.log(res);
+        await this.setState({
+          data: res.data
+        });
+
+        console.log(this.state.data)
       }).catch((err) => console.log(err))
     }
   };
 
-  update = (selectedTable, selectedField, selectedValue) => {
-    axios.put("/api/collections/update", {
+  update = (selectedTable, selectedField, selectedValue, event) => {
+    axios.put("/api/collections", {newData: {[selectedValue.value]: event.target.elements['updateValue'].value}}, {
         params: {
           table: selectedTable.value,
-          field: selectedField.value, value: selectedValue
+          field: selectedField.value
         }
       }
     ).then((res) => {
@@ -132,7 +198,7 @@ export default class Main extends React.Component {
   };
 
   delete = (selectedTable, selectedField, selectedValue) => {
-    axios.put("/api/collections/delete", {
+    axios.delete("/api/collections", {
         params: {
           table: selectedTable.value,
           field: selectedField.value,
@@ -147,16 +213,15 @@ export default class Main extends React.Component {
   crud = (event) => {
     event.preventDefault();
     //Можна й в кожній функції деструктуризувати...
-    const {selectedOperation, selectedTable, selectedField, selectedValue, operations, fields, keysNames} = this.state;
+    const {selectedOperation, selectedTable, selectedField, selectedValue, operations, fields, keysNames, idKeys} = this.state;
 
-    console.log(selectedTable);
     if (selectedTable) {
       if (selectedOperation.value === operations[0].value) {
-        this.create(event, selectedTable, fields, keysNames);
+        this.create(event, selectedTable, fields, keysNames, idKeys);
       } else if (selectedOperation.value === operations[1].value) {
         this.find(selectedTable, selectedField, selectedValue);
       } else if (selectedOperation.value === operations[2].value) {
-        this.update(selectedTable, selectedField, selectedValue);
+        this.update(selectedTable, selectedField, selectedValue, event);
       } else if (selectedOperation.value === operations[3].value) {
         this.delete(selectedTable, selectedField, selectedValue);
       } else {
@@ -166,6 +231,7 @@ export default class Main extends React.Component {
   };
 
   render() {
+    const {selectedOperation, operations, selectedField, selectedTable, tables, idKeys, fields, keysNames, values, data} = this.state;
     return (
       <div className="column">
 
@@ -178,88 +244,48 @@ export default class Main extends React.Component {
           <div>
             <div> Select operation</div>
             <Select
-              value={this.state.selectedOperation}
+              value={selectedOperation}
               onChange={async (selected) => {
                 await this.setState({
                   selectedOperation: selected,
                 });
                 await this.configureFieldsSelect()
               }}
-              options={this.state.operations}
+              options={operations}
               styles={reactSelectStyles}/>
           </div>
 
           <div>
             <div> Select table</div>
             <Select
+              value={selectedTable}
               name="tables"
               onChange={async (selected) => {
                 await this.setState({selectedTable: selected});
                 await this.configureFieldsSelect();
 
               }}
-              options={this.state.tables}
+              options={tables}
               styles={reactSelectStyles}
             />
           </div>
 
+          {selectedTable ?
+            selectedOperation.value === operations[0].value ?
+              <Create idKeys={idKeys} keysNames={keysNames} fields={fields}/> :
+              selectedOperation.value === operations[1].value ?
+                <Read selectedField={selectedField} setSelectedValue={this.setSelectedValue}
+                      onFieldsChange={this.onFieldsChange}
+                      fields={fields} values={values} data={data}
+                /> : this.state.selectedOperation.value === this.state.operations[2].value ?
+                <Update selectedField={selectedField} setSelectedValue={this.setSelectedValue}
+                        onFieldsChange={this.onFieldsChange} fields={fields} values={values}/>
+                : <Delete selectedField={selectedField} setSelectedValue={this.setSelectedValue}
+                          onFieldsChange={this.onFieldsChange} fields={fields} values={values}/>
+            : null}
 
-          {this.state.selectedTable && this.state.selectedOperation.value === this.state.operations[0].value ?
-            <div className="fieldsBlock">
-
-              {this.state.idKeys.map((select, i) => {
-                return <Select
-                  className="field"
-                  key={i}
-                  name={"textInput" + i + this.state.fields.length}
-                  options={select}
-                  styles={reactSelectStyles}
-                  placeholder={this.state.keysNames[i]}
-                />
-              })}
-
-              {this.state.fields.map((field, i) => {
-                return <input key={i} required name={"textInput" + i} className="input field"
-                              placeholder={field.value}/>
-              })}
-            </div>
-            :
-
-            this.state.selectedTable ?
-              <div>
-                <div> Select field</div>
-                <Select
-                  name="fields"
-                  onChange={(selected) => this.setState({
-                    selectedField: selected,
-                  })}
-                  options={this.state.fields}
-                  styles={reactSelectStyles}/>
-              </div> : null
-          }
-
-
-          {this.state.selectedField && this.state.selectedOperation.value === this.state.operations[1].value ?
-            <div>
-              <div> Select value</div>
-              <Select
-                name="values"
-                onChange={(selected) => this.setState({
-                  selectedValue: selected,
-                })}
-                options={this.state.values}
-                styles={reactSelectStyles}/>
-            </div>
-
-            : this.state.selectedField && this.state.selectedOperation.value === this.state.operations[2].value ?
-              <input className="input" placeholder="Enter new data..."/> : null}
-
-          <button className="button" type="submit">{this.state.selectedOperation.value + " this!"}</button>
-
+          <button className="button" type="submit">{selectedOperation.value + " this!"}</button>
         </form>
-      </div>
-    )
+      </div>)
   }
 }
-//delete and read однакові
-
