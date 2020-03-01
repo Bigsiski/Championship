@@ -1,46 +1,36 @@
-import {create, findParentKeys} from "../crud";
+import {create, findParentKeys, extractData, updateData, deleteData} from "../crud";
 import * as fs from 'fs';
 
-var async = require("async");
+const Promise = require('promise');
 const router = require('express').Router();
 
-router.get("/extract", function (req, res, next) {
-  for (let i = 0; i < req.query.path.length; i++) {
-  }
-  res.send('respond with a resource');
-});
 
 //Це не дуже хороший код.
 router.get("/metadata", async function (req, res, next) {
   console.log("Getting metadata..");
-  const response = [];
+  let response = [];
 
   await import("../schemas/" + req.query.table).then(async (Table) => {
-    //Робимо обхід, оскільки eachPath не може бути async
-    const collection = Table[req.query.table];
-    const parent = collection.schema.path('Parent.ParentName');
-    
-    if (collection.schema.paths.hasOwnProperty('Parent.ParentName')) {
-      let keysList = await findParentKeys(collection);
-      response.push([{[parent.defaultValue]: keysList}]);
-    }
 
-    return collection;
-  }).then((collection) => {
+    const collection = Table[req.query.table];
+
     collection.schema.eachPath((path) => {
-      if (path !== '_id' && path !== '__v' && !path.includes('Parent')) {
+      //руками виключаю поля які не треба заповнювати користувачу.
+      if (path !== '_id' && path !== '__v' && !path.includes('Parent') && path !== 'teams' && path !== 'players') {
         console.log(path);
         response.push(path);
       }
     });
-  })
-    .catch((err) => {
-      res.json("Error " + err)
-    });
-
-
-  console.log("response")
-  console.log(response)
+    // console.log(req.query.requireParents);
+    if (req.query.requireParents && collection.schema.paths.hasOwnProperty('Parents')) {
+      let keysList = await Promise.all(collection.schema.tree.Parents.map(async (Parent) => {
+        return await findParentKeys(Parent.ParentName.default)
+      }));
+      response = response.concat(keysList);
+    }
+  }).catch((err) => {
+    res.json("Error " + err)
+  });
   res.json(response);
 });
 
@@ -48,8 +38,29 @@ router.get("/metadata", async function (req, res, next) {
 router.post("/", async function (req, res, next) {
   console.log("Posting new data...");
   console.log(req.query.table);
-  await create(req.query.table, req.body);
-  res.status(200).send("everything is okay...")
+  const response = await create(req.query.table, req.body);
+  res.status(200).send(response)
+});
+
+router.get("/extract", async function (req, res, next) {
+  console.log("extracting...");
+  console.log(req.query);
+  const response = await extractData(req.query.table, req.query.field, req.query.value, req.query.projection, req.query.sort);
+  res.send(response);
+});
+
+router.put("/", async function (req, res, next) {
+  console.log("updating...");
+  console.log(req.query);
+  const response = await updateData(req.query.table, req.query.field, req.body.newData);
+  res.send(response);
+});
+
+router.delete("/", async function (req, res, next) {
+  console.log("deleting...");
+  console.log(req.query);
+  const response = await deleteData(req.query.table, req.query.field, req.query.value);
+  res.send(response);
 });
 
 router.get("/", function (req, res, next) {
