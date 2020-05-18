@@ -40,11 +40,9 @@ app.get('/*', function (req, res) {
 });
 
 async function start() {
-  console.log("STARTING SERVER...")
   setUpConnection();
   app.listen(5000, () => console.log("started at " + 5000));
 }
-
 
 start();
 
