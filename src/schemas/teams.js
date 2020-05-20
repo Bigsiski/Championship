@@ -8,7 +8,7 @@ const teamSchema = new Schema(
     }],
     TeamName: {type: String},
     Points: {type: Number, default: 0, max: 90, min: 0},
-    players: {type: Array, default: void 0} //(_id: mongoose.Schema.Types.ObjectId
+    players: {type: Array, default: void 0} // (_id: mongoose.Schema.Types.ObjectId
   });
 
 export const teams = mongoose.model('teams', teamSchema);
