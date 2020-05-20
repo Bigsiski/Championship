@@ -3,38 +3,36 @@ export const reactSelectStyles = {
         ...styles,
         width: "180px",
         minHeight: "45px",
-        border: "1px solid #c0f0de",
+        border: "1px solid #000",
         borderRadius: "0",
         backgroundColor: "transparent",
-        boxShadow: "0 0 8px 3px rgba(0, 0, 0, 0.3)",
+       // boxShadow: "0 0 8px 3px rgba(0, 0, 0, 0.3)",
         '&:hover': {
             cursor: "text",
-            borderColor: state.isFocused ? "rgb(250, 190, 14)" :"#d6d6d6"
+            borderColor: state.isFocused ? "#beebc2" :"#000",
+            outline: 'none'
         },
     }),
 
     placeholder: (styles) => {
         return {
             ...styles,
-            color: '#c0f0de',
+            color: '#000',
         }
     },
 
     option: (styles, state) => ({
         ...styles,
         width: "140px",
-        background: "linear-gradient(135deg, rgb(18, 188, 176) 20%, rgb(250, 190, 14) 70%)",
-        WebkitBackgroundClip: "text",
-        WebkitTextFillColor: "transparent",
+        backgroundColor: 'transparent',
         fontWeight: "100",
         fontFamily: "Century Gothic, sans-serif",
         overflow: "hidden",
+        color: state.isSelected ? "#1d5a7d" : '#000',
         '&:hover': {
             background: "none",
-            backgroundColor: "rgba(3, 126, 123, 0.5)",
             WebkitBackgroundClip: "unset",
             WebkitTextFillColor: "unset",
-            color: "white",
             cursor: "pointer"
         },
     }),
@@ -42,7 +40,7 @@ export const reactSelectStyles = {
     menu: (styles) => ({
         ...styles,
         width: "180px",
-        color: "white",
+        color: "#000",
         backgroundColor: "transparent",
         overflow: "hidden",
         padding: 20,
@@ -51,7 +49,7 @@ export const reactSelectStyles = {
     singleValue: (styles) => {
         return {
             ...styles,
-            color: "#c0f0de",
+            color: "#000",
         };
     },
 
@@ -65,14 +63,14 @@ export const reactSelectStyles = {
 
     multiValueLabel: (styles) => ({
         ...styles,
-        color: "#c0f0de",
+        color: "#000",
     }),
 
     multiValueRemove: (styles) => ({
         ...styles,
         color: "white",
         ':hover': {
-            color: 'white',
+            color: '#000',
         },
     }),
 };
